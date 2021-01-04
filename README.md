@@ -4,7 +4,7 @@
     <br>
 <p>
 <h1 align="center">
-<p>Plotting code for commonly use neural net architectures</p>
+<p> Graphically map out neural network structures using python and seaborn </p>
 </h1>
 
 ## Table of Contents
