@@ -4,7 +4,7 @@
     <br>
 <p>
 <h1 align="center">
-<p> Graphically map out neural network structures using python and seaborn </p>
+<p> Graphically map out neural network structures </p>
 </h1>
 
 ## Table of Contents
