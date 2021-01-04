@@ -9,12 +9,18 @@ import torch.nn.parallel
 import torch.utils.data
 import seaborn as sns
 import matplotlib.pyplot as plt
+import math
 
 import numpy as np
 
 import resnet
 
 # Device set to either GPU or CPU
+model_names = sorted(name for name in resnet.__dict__
+	if name.islower() and not name.startswith("__")
+					 and name.startswith("resnet")
+					 and callable(resnet.__dict__[name]))
+
 cuda_ = "cuda:0"
 device = torch.device(cuda_ if torch.cuda.is_available() else "cpu")	
 
@@ -35,14 +41,16 @@ def main():
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
 
-def loadNetwork(path):
-    model = resnet.__dict__[args.arch]()
+def loadNetwork(path, arch):
+    model = resnet.__dict__[arch]()
     model.load_state_dict(torch.load(path, map_location=device))
+    return model
 
-def processNetwork():
+def processNetwork(model):
     module_dict = {}
 
     # Loop through modules in network and add {name:array} pairs to dictionary
+    print("Creating dictionary...")
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d):
             module_dict[name] = [module.weight.detach().numpy(), module.weight.detach().numpy().shape]
@@ -60,33 +68,56 @@ def processNetwork():
         del module_dict[name]
 
     # Now we loop through and transform each module into an array that can be plotted more easily
+    print("Cleaning up...")
     for name, module in module_dict.items():
         layer_dim = module[1][0]
         conv_dim = module[1][-1]
         final_dim = layer_dim*conv_dim
         weights = np.array(module[0]).reshape(layer_dim**2, conv_dim, conv_dim)
-        
-        top_weights = []
-        middle_weights = []
-        bottom_weights = []
-            
-        for i in range(len(weights)):
-            top_weights = np.append(top_weights, weights[i][0])
-            middle_weights = np.append(middle_weights, weights[i][1])
-            bottom_weights = np.append(bottom_weights, weights[i][2])
+
+        top_weights = weights[:, 0].flatten()
+        middle_weights = weights[:, 1].flatten()
+        bottom_weights = weights[:, 2].flatten()
             
         weights = np.append(top_weights, np.append(middle_weights, bottom_weights)).reshape(conv_dim, top_weights.shape[0])
         final_weights = np.zeros((final_dim, final_dim))
         # Currently only works when conv_dim = 3 because for loop is hardcoded
+        # Could probably also be vectorized/sped up
         for i in range(layer_dim):
             final_weights[i*3] = weights[0][i*final_dim:(i+1)*final_dim]
             final_weights[i*3+1] = weights[1][i*final_dim:(i+1)*final_dim]
             final_weights[i*3+2] = weights[2][i*final_dim:(i+1)*final_dim]
         
         module_dict[name] = final_weights
+    
+    return module_dict
 
-def plot_layer(layer_name):
+# def plotLayer(layer_name):
     # Plots a single layer
 
-def plot_network():
-    # Plots entire network
+def plotNetwork(module_dict):
+    # Not a great way of doing it but it'll do for now
+    min_val = 0
+    max_val = 0
+    for name, module in module_dict.items():
+        if np.amin(module) < min_val:
+            min_val = np.amin(module)
+        if np.amax(module) > max_val:
+            max_val = np.amax(module)
+
+    list_keys = list(module_dict)
+    num_layers = len(module_dict)
+    num_cols = 8
+    num_rows = math.ceil(num_layers/8)
+    counter = 0
+    fig, axes = plt.subplots(num_cols, num_rows, figsize=(num_cols*10, num_rows*10))
+
+    for i, ax in zip(range(num_layers), axes.flat):
+        sns.heatmap(module_dict[list_keys[i]], xticklabels=False, yticklabels=False, cmap="Blues", square=True, cbar=False, ax=ax)
+        #axes[i].set_title(list_keys[i])
+        ax.set(ylim=(0, 192))
+        ax.set(xlim=(0, 192))
+    
+    if not os.path.exists('plots'):
+        os.makedirs('plots')
+    fig.savefig('plots/full_network.png')
