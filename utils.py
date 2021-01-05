@@ -125,4 +125,4 @@ def plotNetwork(module_dict, arch, max_dim):
     
     if not os.path.exists('plots'):
         os.makedirs('plots')
-    fig.savefig('plots/{architecture}full_network.png'.format(architecture=arch))
+    fig.savefig('plots/{architecture}full_network.png'.format(architecture=arch), transparent=True)
