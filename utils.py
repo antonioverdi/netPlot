@@ -14,6 +14,7 @@ import math
 import numpy as np
 
 import resnet
+import other_resnet
 
 # Device set to either GPU or CPU
 model_names = sorted(name for name in resnet.__dict__
@@ -42,9 +43,14 @@ def main():
         os.makedirs(args.save_dir)
 
 def loadNetwork(path, arch):
-    model = resnet.__dict__[arch]()
-    model.load_state_dict(torch.load(path, map_location=device))
-    return model
+    if arch in resnet.__dict__:
+        model = resnet.__dict__[arch]()
+        model.load_state_dict(torch.load(path, map_location=device))
+        return model
+    elif arch in other_resnet.__dict__:
+        model = other_resnet.__dict__[arch]()
+        model.load_state_dict(torch.load(path, map_location=device))
+        return model
 
 def processNetwork(model):
     module_dict = {}
@@ -58,7 +64,6 @@ def processNetwork(model):
             module_dict[name] = [module.weight.detach().numpy(), module.weight.detach().numpy().shape]
 
     # Delete all layers that are not 4D or don't have dimensions (a, a, b, b)
-    # In most cases this is just the first Conv2d layer and linear layer
     to_delete = []
     for name, module in module_dict.items():
         if (len(module[1]) < 4) or (module[1][0] != module[1][1]):
@@ -95,7 +100,7 @@ def processNetwork(model):
 # def plotLayer(layer_name):
     # Plots a single layer
 
-def plotNetwork(module_dict):
+def plotNetwork(module_dict, arch, max_dim):
     # Not a great way of doing it but it'll do for now
     min_val = 0
     max_val = 0
@@ -113,11 +118,11 @@ def plotNetwork(module_dict):
     fig, axes = plt.subplots(num_cols, num_rows, figsize=(num_cols*10, num_rows*10))
 
     for i, ax in zip(range(num_layers), axes.flat):
-        sns.heatmap(module_dict[list_keys[i]], xticklabels=False, yticklabels=False, cmap="Blues", square=True, cbar=False, ax=ax)
+        sns.heatmap(module_dict[list_keys[i]], xticklabels=False, yticklabels=False, center=0.00, cmap="coolwarm", square=True, cbar=False, ax=ax)
         #axes[i].set_title(list_keys[i])
-        ax.set(ylim=(0, 192))
-        ax.set(xlim=(0, 192))
+        ax.set(ylim=(0, max_dim*3))
+        ax.set(xlim=(0, max_dim*3))
     
     if not os.path.exists('plots'):
         os.makedirs('plots')
-    fig.savefig('plots/full_network.png')
+    fig.savefig('plots/{architecture}full_network.png'.format(architecture=arch))
