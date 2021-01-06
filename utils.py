@@ -66,32 +66,39 @@ def processNetwork(model):
     # Delete all layers that are not 4D or don't have dimensions (a, a, b, b)
     to_delete = []
     for name, module in module_dict.items():
-        if (len(module[1]) < 4) or (module[1][0] != module[1][1]):
+        if (len(module[1]) < 4) or ((module[1][-1] != 1) and (module[1][-1] != 3)):
             to_delete.append(name)
-            
+            print(module[1][-1])
     for name in to_delete:
         del module_dict[name]
 
     # Now we loop through and transform each module into an array that can be plotted more easily
     print("Cleaning up...")
     for name, module in module_dict.items():
-        layer_dim = module[1][0]
+        x_dim = module[1][0]
+        y_dim = module[1][1]
         conv_dim = module[1][-1]
-        final_dim = layer_dim*conv_dim
-        weights = np.array(module[0]).reshape(layer_dim**2, conv_dim, conv_dim)
+        final_x_dim = x_dim*conv_dim
+        final_y_dim = y_dim*conv_dim
 
-        top_weights = weights[:, 0].flatten()
-        middle_weights = weights[:, 1].flatten()
-        bottom_weights = weights[:, 2].flatten()
-            
-        weights = np.append(top_weights, np.append(middle_weights, bottom_weights)).reshape(conv_dim, top_weights.shape[0])
-        final_weights = np.zeros((final_dim, final_dim))
-        # Currently only works when conv_dim = 3 because for loop is hardcoded
-        # Could probably also be vectorized/sped up
-        for i in range(layer_dim):
-            final_weights[i*3] = weights[0][i*final_dim:(i+1)*final_dim]
-            final_weights[i*3+1] = weights[1][i*final_dim:(i+1)*final_dim]
-            final_weights[i*3+2] = weights[2][i*final_dim:(i+1)*final_dim]
+        if conv_dim == 3:
+            weights = np.array(module[0]).reshape(x_dim*y_dim, conv_dim, conv_dim)
+
+            top_weights = weights[:, 0].flatten()
+            middle_weights = weights[:, 1].flatten()
+            bottom_weights = weights[:, 2].flatten()
+                
+            weights = np.append(top_weights, np.append(middle_weights, bottom_weights)).reshape(conv_dim, top_weights.shape[0])
+            final_weights = np.zeros((final_y_dim, final_x_dim))
+            print(final_weights.shape)
+            # Currently only works when conv_dim = 3 because for loop is hardcoded
+            # Could probably also be vectorized/sped up
+            for i in range(y_dim):
+                final_weights[i*3] = weights[0][i*final_x_dim:(i+1)*final_x_dim]
+                final_weights[i*3+1] = weights[1][i*final_x_dim:(i+1)*final_x_dim]
+                final_weights[i*3+2] = weights[2][i*final_x_dim:(i+1)*final_x_dim]
+        else:
+            final_weights = module[0].reshape(x_dim, y_dim)
         
         module_dict[name] = final_weights
     
@@ -114,7 +121,6 @@ def plotNetwork(module_dict, arch, max_dim):
     num_layers = len(module_dict)
     num_cols = 8
     num_rows = math.ceil(num_layers/8)
-    counter = 0
     fig, axes = plt.subplots(num_cols, num_rows, figsize=(num_cols*10, num_rows*10))
 
     for i, ax in zip(range(num_layers), axes.flat):
