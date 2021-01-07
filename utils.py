@@ -1,3 +1,4 @@
+"""File containing all utility functions for NetPlot"""
 import argparse
 import os
 import shutil
@@ -15,32 +16,6 @@ import numpy as np
 
 import resnet
 import other_resnet
-
-# Device set to either GPU or CPU
-model_names = sorted(name for name in resnet.__dict__
-	if name.islower() and not name.startswith("__")
-					 and name.startswith("resnet")
-					 and callable(resnet.__dict__[name]))
-
-cuda_ = "cuda:0"
-device = torch.device(cuda_ if torch.cuda.is_available() else "cpu")	
-
-parser = argparse.ArgumentParser(description='Heatmap plotting for Neural Networks')
-parser.add_argument('--path', default='', type=str, metavar='PATH',
-					help='Path to .th file (default: none)')
-parser.add_argument('--save-dir', dest='save_dir',
-					help='The directory used to save the plot(s)',
-					default='save_temp', type=str)
-parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet56', type=str, 
-                    help='Currently only supports ResNet models. (default: resnet56)')
-
-def main():
-    global args
-    args = parser.parse_args()
-
-    # Check the save_dir exists or not
-    if not os.path.exists(args.save_dir):
-        os.makedirs(args.save_dir)
 
 def loadNetwork(path, arch):
     if arch in resnet.__dict__:
@@ -63,12 +38,13 @@ def processNetwork(model):
         elif isinstance(module, torch.nn.Linear):
             module_dict[name] = [module.weight.detach().numpy(), module.weight.detach().numpy().shape]
 
-    # Delete all layers that are not 4D or don't have dimensions (a, a, b, b)
+    # Delete all layers that are not 4 dimensional
     to_delete = []
     for name, module in module_dict.items():
         if (len(module[1]) < 4) or ((module[1][-1] != 1) and (module[1][-1] != 3)):
             to_delete.append(name)
             print(module[1][-1])
+
     for name in to_delete:
         del module_dict[name]
 
@@ -104,7 +80,7 @@ def processNetwork(model):
     
     return module_dict
 
-# def plotLayer(layer_name):
+#TODO: def plotLayer(layer_name):
     # Plots a single layer
 
 def plotNetwork(module_dict, arch, max_dim):
@@ -132,3 +108,14 @@ def plotNetwork(module_dict, arch, max_dim):
     if not os.path.exists('plots'):
         os.makedirs('plots')
     fig.savefig('plots/{architecture}full_network.png'.format(architecture=arch), transparent=True)
+
+def plotDifference(path1, path2, architecture):
+    network1 = loadNetwork(path1, architecture)
+    network2 = loadNetwork(path2, architecture)
+    network1_dict = processNetwork(network1)
+    network2_dict = processNetwork(network2)
+
+    if network1_dict.shape == network2_dict.shape:
+        difference = np.subtract(network2_dict, network1_dict)
+    else:
+        print("Network shapes do not match")
