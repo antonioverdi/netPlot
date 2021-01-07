@@ -121,7 +121,7 @@ def plotNetwork(module_dict, arch, max_dim):
 
     for i, ax in zip(range(num_cols*num_rows), axes.flat):
         if i < num_layers:
-            sns.heatmap(module_dict[list_keys[i]], center=0.00, cmap="coolwarm", square=True, cbar=False, ax=ax)
+            sns.heatmap(module_dict[list_keys[i]], xticklabels=False, yticklabels=False, center=0.00, cmap="coolwarm", square=True, cbar=False, ax=ax)
             #axes[i].set_title(list_keys[i])
             ax.set(ylim=(0, max_dim*3))
             ax.set(xlim=(0, max_dim*3))
