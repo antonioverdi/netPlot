@@ -11,13 +11,18 @@ import torch.utils.data
 import seaborn as sns
 import matplotlib.pyplot as plt
 import math
+import sys
 
 import numpy as np
 
 import resnet
 import other_resnet
 
+cuda_ = "cuda:0"
+device = torch.device(cuda_ if torch.cuda.is_available() else "cpu")
+
 def loadNetwork(path, arch):
+    """ Loads the network from the specified path """
     if arch in resnet.__dict__:
         model = resnet.__dict__[arch]()
         model.load_state_dict(torch.load(path, map_location=device))
@@ -28,6 +33,15 @@ def loadNetwork(path, arch):
         return model
 
 def processNetwork(model):
+    """ Creates and returns a dictionary containing {module name : weights} pairs 
+    
+    This function takes a model as an argument and creates a dictionary corresponding to that model.
+    The dictionary keys are the names of each module in the model and the value for each key is a 
+    numpy array made up of the weights for that module.
+
+    Args:
+        model: Neural network that has been loaded using loadNetwork()
+    """
     module_dict = {}
 
     # Loop through modules in network and add {name:array} pairs to dictionary
@@ -43,7 +57,6 @@ def processNetwork(model):
     for name, module in module_dict.items():
         if (len(module[1]) < 4) or ((module[1][-1] != 1) and (module[1][-1] != 3)):
             to_delete.append(name)
-            print(module[1][-1])
 
     for name in to_delete:
         del module_dict[name]
@@ -66,7 +79,6 @@ def processNetwork(model):
                 
             weights = np.append(top_weights, np.append(middle_weights, bottom_weights)).reshape(conv_dim, top_weights.shape[0])
             final_weights = np.zeros((final_y_dim, final_x_dim))
-            print(final_weights.shape)
             # Currently only works when conv_dim = 3 because for loop is hardcoded
             # Could probably also be vectorized/sped up
             for i in range(y_dim):
@@ -84,6 +96,13 @@ def processNetwork(model):
     # Plots a single layer
 
 def plotNetwork(module_dict, arch, max_dim):
+    """Creates a set of heatmaps corresponding to the weights in each layer of the original network
+
+    Args:
+        module_dict: Dictionary returned by the processNetwork() function
+        arch (str): The network architecture being used
+        max_dim (int): Will be automated soon so don't worry about this
+    """
     # Not a great way of doing it but it'll do for now
     min_val = 0
     max_val = 0
@@ -104,18 +123,37 @@ def plotNetwork(module_dict, arch, max_dim):
         #axes[i].set_title(list_keys[i])
         ax.set(ylim=(0, max_dim*3))
         ax.set(xlim=(0, max_dim*3))
+        ax.set_title(list_keys[i])
     
     if not os.path.exists('plots'):
         os.makedirs('plots')
+
     fig.savefig('plots/{architecture}full_network.png'.format(architecture=arch), transparent=True)
 
-def plotDifference(path1, path2, architecture):
+def plotDifference(path1, path2, architecture, max_dim):
+    """Plots the change in weights between two neural networks
+
+    Plots the difference in weights between the two networks passed as arguments. 
+    Note that we consider the order of the networks to be chronological, meaning we 
+    subtract the weights of the first network from the weights of the second network.
+
+    Args:
+        path1 (str): Location of the .th or .pth file for the first network
+        path2 (str): Location of the .th or .pth file for the second network
+        architecture (str): The network architecture being used (architectures must match)
+        max_dim (int): Will be automated soon so don't worry about this
+    """
     network1 = loadNetwork(path1, architecture)
     network2 = loadNetwork(path2, architecture)
     network1_dict = processNetwork(network1)
     network2_dict = processNetwork(network2)
+    difference_dict = {}
 
-    if network1_dict.shape == network2_dict.shape:
-        difference = np.subtract(network2_dict, network1_dict)
-    else:
-        print("Network shapes do not match")
+    for name, module in network1_dict.items():
+        if network1_dict[name].shape == network2_dict[name].shape:
+            difference_dict[name] = np.subtract(network2_dict[name], network1_dict[name])
+        else:
+            print("Input networks must be of the same architecture")
+            break
+    
+    plotNetwork(difference_dict, architecture, max_dim)
