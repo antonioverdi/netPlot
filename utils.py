@@ -117,14 +117,20 @@ def plotNetwork(module_dict, arch, max_dim):
     num_cols = 8
     num_rows = math.ceil(num_layers/8)
     fig, axes = plt.subplots(num_cols, num_rows, figsize=(num_cols*10, num_rows*10))
+    sns.set_style("white")
 
-    for i, ax in zip(range(num_layers), axes.flat):
-        sns.heatmap(module_dict[list_keys[i]], xticklabels=False, yticklabels=False, center=0.00, cmap="coolwarm", square=True, cbar=False, ax=ax)
-        #axes[i].set_title(list_keys[i])
-        ax.set(ylim=(0, max_dim*3))
-        ax.set(xlim=(0, max_dim*3))
-        ax.set_title(list_keys[i])
-    
+    for i, ax in zip(range(num_cols*num_rows), axes.flat):
+        if i < num_layers:
+            sns.heatmap(module_dict[list_keys[i]], center=0.00, cmap="coolwarm", square=True, cbar=False, ax=ax)
+            #axes[i].set_title(list_keys[i])
+            ax.set(ylim=(0, max_dim*3))
+            ax.set(xlim=(0, max_dim*3))
+            ax.set_title(list_keys[i])
+            ax.set_facecolor('#F2F2F2')
+        else:
+            fig.delaxes(ax)
+
+
     if not os.path.exists('plots'):
         os.makedirs('plots')
 
@@ -155,5 +161,5 @@ def plotDifference(path1, path2, architecture, max_dim):
         else:
             print("Input networks must be of the same architecture")
             break
-    
+
     plotNetwork(difference_dict, architecture, max_dim)
