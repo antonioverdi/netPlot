@@ -22,6 +22,8 @@ import vgg
 cuda_ = "cuda:0"
 device = torch.device(cuda_ if torch.cuda.is_available() else "cpu")
 
+#TODO: def supportedNetworks():
+
 def loadNetwork(path, arch):
     """ Loads the network from the specified path """
     if arch in resnet.__dict__:
@@ -118,21 +120,25 @@ def plotNetwork(module_dict, arch, max_dim):
         if np.amax(module) > max_val:
             max_val = np.amax(module)
 
+    print(min_val)
+    print(max_val)
     list_keys = list(module_dict)
     num_layers = len(module_dict)
-    num_cols = 8
-    num_rows = math.ceil(num_layers/8)
+    num_cols = math.ceil(math.sqrt(num_layers))
+    num_rows = math.ceil(num_layers/num_cols)
     fig, axes = plt.subplots(num_cols, num_rows, figsize=(num_cols*10, num_rows*10))
-    sns.set_style("white")
 
     for i, ax in zip(range(num_cols*num_rows), axes.flat):
         if i < num_layers:
-            sns.heatmap(module_dict[list_keys[i]], xticklabels=False, yticklabels=False, center=0.00, cmap="coolwarm", square=True, cbar=False, ax=ax)
-            #axes[i].set_title(list_keys[i])
-            ax.set(ylim=(0, max_dim*3))
-            ax.set(xlim=(0, max_dim*3))
+            sub = sns.heatmap(module_dict[list_keys[i]], cmap=sns.diverging_palette(240, 10, s=100, as_cmap=True), 
+                                center=0.00, cbar_kws={"shrink": 0.85}, xticklabels=False, yticklabels=False, square=True, ax=ax)
+            #ax.set(ylim=(0, max_dim*3))
+            #ax.set(xlim=(0, max_dim*3))
             ax.set_title(list_keys[i])
-            ax.set_facecolor('#F2F2F2')
+            # make frame visible
+            for _, spine in sub.spines.items():
+                spine.set_visible(True)
+                spine.set_linewidth(2) 
         else:
             fig.delaxes(ax)
 
