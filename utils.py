@@ -17,6 +17,7 @@ import numpy as np
 
 import resnet
 import other_resnet
+import vgg
 
 cuda_ = "cuda:0"
 device = torch.device(cuda_ if torch.cuda.is_available() else "cpu")
@@ -31,6 +32,11 @@ def loadNetwork(path, arch):
         model = other_resnet.__dict__[arch]()
         model.load_state_dict(torch.load(path, map_location=device))
         return model
+    elif arch in vgg.__dict__:
+        model = vgg.__dict__[arch]()
+        model.load_state_dict(torch.load(path, map_location=device))
+        return model
+
 
 def processNetwork(model):
     """ Creates and returns a dictionary containing {module name : weights} pairs 
