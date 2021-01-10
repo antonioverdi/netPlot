@@ -103,13 +103,12 @@ def processNetwork(model):
 #TODO: def plotLayer(layer_name):
     # Plots a single layer
 
-def plotNetwork(module_dict, arch, max_dim):
+def plotNetwork(module_dict, arch):
     """Creates a set of heatmaps corresponding to the weights in each layer of the original network
 
     Args:
         module_dict: Dictionary returned by the processNetwork() function
         arch (str): The network architecture being used
-        max_dim (int): Will be automated soon so don't worry about this
     """
     # Not a great way of doing it but it'll do for now
     min_val = 0
@@ -132,9 +131,7 @@ def plotNetwork(module_dict, arch, max_dim):
         if i < num_layers:
             sub = sns.heatmap(module_dict[list_keys[i]], cmap=sns.diverging_palette(240, 10, s=100, as_cmap=True), 
                                 center=0.00, cbar_kws={"shrink": 0.85}, xticklabels=False, yticklabels=False, square=True, ax=ax)
-            #ax.set(ylim=(0, max_dim*3))
-            #ax.set(xlim=(0, max_dim*3))
-            ax.set_title(list_keys[i])
+            ax.set_title(list_keys[i], fontsize=20)
             # make frame visible
             for _, spine in sub.spines.items():
                 spine.set_visible(True)
@@ -148,7 +145,7 @@ def plotNetwork(module_dict, arch, max_dim):
 
     fig.savefig('plots/{architecture}full_network.png'.format(architecture=arch), transparent=True)
 
-def plotDifference(path1, path2, architecture, max_dim):
+def plotDifference(path1, path2, architecture):
     """Plots the change in weights between two neural networks
 
     Plots the difference in weights between the two networks passed as arguments. 
@@ -159,7 +156,6 @@ def plotDifference(path1, path2, architecture, max_dim):
         path1 (str): Location of the .th or .pth file for the first network
         path2 (str): Location of the .th or .pth file for the second network
         architecture (str): The network architecture being used (architectures must match)
-        max_dim (int): Will be automated soon so don't worry about this
     """
     network1 = loadNetwork(path1, architecture)
     network2 = loadNetwork(path2, architecture)
@@ -174,4 +170,4 @@ def plotDifference(path1, path2, architecture, max_dim):
             print("Input networks must be of the same architecture")
             break
 
-    plotNetwork(difference_dict, architecture, max_dim)
+    plotNetwork(difference_dict, architecture)
